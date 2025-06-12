@@ -5,10 +5,11 @@ import json
 import pandas as pd
 import re
 
-# Define the path for our cookie file.
+# --- CONFIGURATION ---
 COOKIE_FILE = 'my_cookies.json'
 TARGET_URL = "https://www.tiktok.com/tiktokstudio/inspiration/recommended"
 OUTPUT_FILE = 'tiktok_recommendations.csv'
+SCROLL_ATTEMPTS = 5 # How many times we want to scroll down
 
 def extract_hashtags(text):
     """Uses regular expressions to find all hashtags in a string."""
@@ -47,18 +48,22 @@ async def main():
             container = await page.wait_for_selector(video_list_container_selector, timeout=30000)
             print("Found the main video list container.")
 
-            # --- NEW AND IMPROVED LOGIC ---
-            # Now that we have the container, we specifically wait for a video card to appear INSIDE it.
-            video_card_selector = 'div[data-tt="components_InspirationItemCard_FlexColumn"]'
-            print("Waiting for video cards to load inside the container...")
-            await container.wait_for_selector(video_card_selector, timeout=15000) # Wait up to 15s for the first card
-            
-            video_cards = await container.query_selector_all(video_card_selector)
-            print(f"SUCCESS: Found {len(video_cards)} video cards on the page.")
-            # --- END OF NEW LOGIC ---
+            # --- NEW SCROLLING LOGIC ---
+            print("Attempting to scroll to load more videos...")
+            for i in range(SCROLL_ATTEMPTS):
+                print(f"  Scroll attempt {i + 1}/{SCROLL_ATTEMPTS}...")
+                # Execute JavaScript to scroll to the bottom of the page
+                await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                # Wait for a short period to allow new content to load
+                await asyncio.sleep(3) # Wait 3 seconds after each scroll
+            # --- END OF SCROLLING LOGIC ---
 
+            video_card_selector = 'div[data-tt="components_InspirationItemCard_FlexColumn"]'
+            video_cards = await container.query_selector_all(video_card_selector)
+            print(f"\nSUCCESS: Found {len(video_cards)} video cards after scrolling.")
+            
             if not video_cards:
-                print("No video cards found after waiting. Exiting.")
+                print("No video cards found even after scrolling. Exiting.")
                 return
 
             scraped_data = []
@@ -87,13 +92,9 @@ async def main():
                 df = pd.DataFrame(scraped_data)
                 df.to_csv(OUTPUT_FILE, index=False, encoding='utf-8-sig')
                 print(f"Data saved successfully to {OUTPUT_FILE}!")
-                print("\n--- Scraped Data ---")
-                print(df)
-                print("--------------------")
 
         except Exception as e:
             print(f"\nAn error occurred during scraping: {e}")
-            print("The script will now pause so you can inspect the page manually.")
             await page.pause()
 
         finally:
