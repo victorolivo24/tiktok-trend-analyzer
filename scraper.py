@@ -5,14 +5,12 @@ import json
 import pandas as pd
 import re
 
-# --- CONFIGURATION ---
 COOKIE_FILE = 'my_cookies.json'
 TARGET_URL = "https://www.tiktok.com/tiktokstudio/inspiration/recommended"
-OUTPUT_FILE = 'tiktok_insights_data.csv' # New, final output file
-SCROLL_ATTEMPTS = 15 # Set how many times to scroll
+OUTPUT_FILE = 'tiktok_final_insights.csv'
+SCROLL_ATTEMPTS = 15
 
 def extract_hashtags(text):
-    """Finds all hashtags in a string, returns a list of strings without the '#'"""
     return re.findall(r"#(\w+)", text)
 
 async def main():
@@ -21,21 +19,15 @@ async def main():
         context = await browser.new_context(user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
 
         if not os.path.exists(COOKIE_FILE):
-            print(f"Error: Cookie file '{COOKIE_FILE}' not found.")
-            return
+            print(f"Error: Cookie file '{COOKIE_FILE}' not found."); return
         
         print("Loading cookies...")
-        with open(COOKIE_FILE, 'r', encoding='utf-8') as f:
-            cookies = json.load(f)
+        with open(COOKIE_FILE, 'r', encoding='utf-8') as f: cookies = json.load(f)
 
-        valid_same_site_values = ["Strict", "Lax", "None"]
-        for cookie in cookies:
-            if cookie.get("sameSite") not in valid_same_site_values:
-                cookie["sameSite"] = "Lax"
-        
+        valid_same_site_values = ["Strict", "Lax", "None"]; [c.update({"sameSite": "Lax"}) for c in cookies if c.get("sameSite") not in valid_same_site_values]
         await context.add_cookies(cookies)
-        page = await context.new_page()
         
+        page = await context.new_page()
         print(f"Navigating to: {TARGET_URL}")
         await page.goto(TARGET_URL, timeout=90000)
         print("Page loaded.")
@@ -45,51 +37,38 @@ async def main():
             
             print(f"Scrolling {SCROLL_ATTEMPTS} times...")
             for i in range(SCROLL_ATTEMPTS):
-                await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                await asyncio.sleep(3)
+                await page.evaluate("window.scrollTo(0, document.body.scrollHeight)"); await asyncio.sleep(4)
             
             video_cards = await container.query_selector_all('div[data-tt="components_InspirationItemCard_FlexColumn"]')
-            print(f"Found {len(video_cards)} videos to scrape.")
+            print(f"Found {len(video_cards)} videos. Scraping data from main grid...")
 
             scraped_data = []
             for card in video_cards:
-                # Scrape data points, with defaults if not found
-                caption = (await (await card.query_selector('span[data-tt="components_InspirationItemCard_TruncateText"]')) .inner_text()) if await card.query_selector('span[data-tt="components_InspirationItemCard_TruncateText"]') else ""
+                caption_element = await card.query_selector('span[data-tt="components_InspirationItemCard_TruncateText"]')
+                caption = await caption_element.inner_text() if caption_element else ""
                 
-                # --- NEW: Scrape Duration and Sound ---
-                # These selectors are based on common structures and your screenshot
-                duration_element = await card.query_selector('div[data-tt="VideoCover_index_Absolute"] span')
-                duration = await duration_element.inner_text() if duration_element else "0:00"
-
-                sound_element = await card.query_selector('div[data-tt="components_InspirationItemCard_FlexRow"] > span')
-                sound = await sound_element.inner_text() if sound_element else "Unknown Sound"
+                view_count_str, like_count_str = "0", "0"
+                stat_elements = await card.query_selector_all('div[data-tt="components_InspirationItemCard_FlexRow_6"]')
+                if len(stat_elements) > 0 and await stat_elements[0].query_selector('span[data-icon="PlayBold"]'):
+                    view_count_element = await stat_elements[0].query_selector('span[data-tt="components_InspirationItemCard_TUXText"]')
+                    if view_count_element: view_count_str = await view_count_element.inner_text()
+                if len(stat_elements) > 1 and await stat_elements[1].query_selector('span[data-icon="HeartBold"]'):
+                    like_count_element = await stat_elements[1].query_selector('span[data-tt="components_InspirationItemCard_TUXText"]')
+                    if like_count_element: like_count_str = await like_count_element.inner_text()
                 
-                hashtags_found = extract_hashtags(caption)
-                
-                scraped_data.append({
-                    'caption': caption.strip(),
-                    'hashtags': ", ".join([f"#{tag}" for tag in hashtags_found]),
-                    'sound': sound.strip(),
-                    'duration': duration.strip()
-                })
+                hashtags = ", ".join([f"#{tag}" for tag in extract_hashtags(caption)])
+                scraped_data.append({'caption': caption.strip(), 'hashtags': hashtags, 'views': view_count_str, 'likes': like_count_str})
 
             if scraped_data:
                 df = pd.DataFrame(scraped_data)
                 df.to_csv(OUTPUT_FILE, index=False, encoding='utf-8-sig')
-                print(f"\nSUCCESS: Data for {len(df)} videos saved to {OUTPUT_FILE}!")
+                print(f"\nSUCCESS! Data for {len(df)} videos saved to {OUTPUT_FILE}!")
 
         except Exception as e:
             print(f"\nAn error occurred: {e}")
         finally:
-            print("Scraping process finished.")
+            print("Process finished.")
             await browser.close()
 
 if __name__ == "__main__":
-    try:
-        import pandas
-    except ImportError:
-        print("Installing pandas...")
-        import subprocess, sys
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas"])
-    
     asyncio.run(main())
