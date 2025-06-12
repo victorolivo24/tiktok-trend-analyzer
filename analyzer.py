@@ -13,18 +13,15 @@ BARBER_KEYWORDS = [
 try:
     from nltk.corpus import stopwords
     import nltk
-    # Download the stopwords dataset if it's not already present
     try:
         stopwords.words('english')
     except LookupError:
         print("NLTK stopwords not found. Downloading...")
         nltk.download('stopwords')
-        print("Download complete.")
     STOP_WORDS = set(stopwords.words('english'))
 except ImportError:
-    print("NLTK library not found. Please install it by running: pip install nltk")
+    print("NLTK library not found. Please run: pip install nltk")
     STOP_WORDS = set()
-
 
 def analyze_insights():
     """
@@ -52,24 +49,23 @@ def analyze_insights():
     print("\n" + "="*40)
     print("🏆 Top 15 Most Common Hashtags 🏆")
     print("="*40)
-    all_hashtags = [tag for tag_list in df_filtered['hashtags'].dropna() for tag in tag_list.split(',') if tag.strip()]
+    # **BUG FIX:** Convert all tags to lowercase BEFORE counting
+    all_hashtags = [tag.strip().lower() for tag_list in df_filtered['hashtags'].dropna() for tag in tag_list.split(',') if tag.strip()]
     hashtag_counts = Counter(all_hashtags)
     for hashtag, count in hashtag_counts.most_common(15):
-        print(f"  {hashtag.strip().lower()}: {count} times")
+        print(f"  {hashtag}: {count} times")
 
     # --- 3. Keyword Analysis ---
     print("\n" + "="*40)
     print("🔑 Top 15 Most Common Keywords (in captions) 🔑")
     print("="*40)
-    # Clean and split all captions into words
     all_words = re.findall(r'\b\w+\b', ' '.join(df_filtered['caption'].dropna()).lower())
-    # Filter out stop words and our original search keywords
-    meaningful_words = [word for word in all_words if word not in STOP_WORDS and word not in BARBER_KEYWORDS and not word.isdigit()]
+    meaningful_words = [word for word in all_words if word not in STOP_WORDS and word not in BARBER_KEYWORDS and not word.isdigit() and len(word) > 2]
     keyword_counts = Counter(meaningful_words)
     for keyword, count in keyword_counts.most_common(15):
         print(f"  '{keyword}': {count} times")
 
-    # --- 4. Sound Analysis ---
+    # --- 4. Sound & Duration Analysis (from scraper data) ---
     print("\n" + "="*40)
     print("🎵 Top 10 Trending Sounds 🎵")
     print("="*40)
@@ -78,28 +74,16 @@ def analyze_insights():
         if sound != "Unknown Sound":
             print(f"  '{sound}': {count} videos")
 
-    # --- 5. Duration Analysis ---
     print("\n" + "="*40)
     print("⏱️ Video Duration Analysis ⏱️")
     print("="*40)
-    # Convert duration "M:SS" to seconds for calculation
-    def duration_to_seconds(d):
-        try:
-            parts = d.split(':')
-            if len(parts) == 2:
-                return int(parts[0]) * 60 + int(parts[1])
-            return 0
-        except:
-            return 0 # Return 0 if conversion fails
-    
-    df_filtered['duration_seconds'] = df_filtered['duration'].apply(duration_to_seconds)
+    df_filtered['duration_seconds'] = df_filtered['duration'].apply(lambda d: int(d.split(':')[0]) * 60 + int(d.split(':')[1]) if ':' in str(d) else 0)
     valid_durations = df_filtered[df_filtered['duration_seconds'] > 0]
-    
     if not valid_durations.empty:
         avg_duration = valid_durations['duration_seconds'].mean()
         print(f"  Average Video Length: {avg_duration:.2f} seconds")
     else:
-        print("  Could not calculate average duration.")
+        print("  Duration data not found in this scrape.")
 
 if __name__ == "__main__":
     analyze_insights()
