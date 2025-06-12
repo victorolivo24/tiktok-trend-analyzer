@@ -5,12 +5,14 @@ import json
 import pandas as pd
 import re
 
+# --- CONFIGURATION ---
 COOKIE_FILE = 'my_cookies.json'
 TARGET_URL = "https://www.tiktok.com/tiktokstudio/inspiration/recommended"
-OUTPUT_FILE = 'tiktok_recommendations.csv'
-SCROLL_ATTEMPTS = 5
+OUTPUT_FILE = 'tiktok_insights_data.csv' # New, final output file
+SCROLL_ATTEMPTS = 15 # Set how many times to scroll
 
 def extract_hashtags(text):
+    """Finds all hashtags in a string, returns a list of strings without the '#'"""
     return re.findall(r"#(\w+)", text)
 
 async def main():
@@ -22,7 +24,7 @@ async def main():
             print(f"Error: Cookie file '{COOKIE_FILE}' not found.")
             return
         
-        print("Cookie file found...")
+        print("Loading cookies...")
         with open(COOKIE_FILE, 'r', encoding='utf-8') as f:
             cookies = json.load(f)
 
@@ -32,47 +34,43 @@ async def main():
                 cookie["sameSite"] = "Lax"
         
         await context.add_cookies(cookies)
-        print("Cookies loaded.")
         page = await context.new_page()
         
         print(f"Navigating to: {TARGET_URL}")
         await page.goto(TARGET_URL, timeout=90000)
-        
         print("Page loaded.")
         
         try:
-            container_selector = 'div[data-tt="components_RecommendedVideoList_Container"]'
-            container = await page.wait_for_selector(container_selector, timeout=30000)
+            container = await page.wait_for_selector('div[data-tt="components_RecommendedVideoList_Container"]', timeout=30000)
             
-            print(f"Scrolling {SCROLL_ATTEMPTS} times to load more videos...")
+            print(f"Scrolling {SCROLL_ATTEMPTS} times...")
             for i in range(SCROLL_ATTEMPTS):
                 await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 await asyncio.sleep(3)
             
-            card_selector = 'div[data-tt="components_InspirationItemCard_FlexColumn"]'
-            video_cards = await container.query_selector_all(card_selector)
-            print(f"Found {len(video_cards)} videos.")
+            video_cards = await container.query_selector_all('div[data-tt="components_InspirationItemCard_FlexColumn"]')
+            print(f"Found {len(video_cards)} videos to scrape.")
 
             scraped_data = []
             for card in video_cards:
-                caption = "CAPTION NOT FOUND"
-                hashtags_found = []
-                image_link = "IMAGE LINK NOT FOUND"
+                # Scrape data points, with defaults if not found
+                caption = (await (await card.query_selector('span[data-tt="components_InspirationItemCard_TruncateText"]')) .inner_text()) if await card.query_selector('span[data-tt="components_InspirationItemCard_TruncateText"]') else ""
                 
-                caption_element = await card.query_selector('span[data-tt="components_InspirationItemCard_TruncateText"]')
-                if caption_element:
-                    caption = await caption_element.inner_text()
-                    hashtags_found = extract_hashtags(caption)
-                
-                image_element = await card.query_selector('img[data-tt="VideoCover_index_img"]')
-                if image_element:
-                    image_link = await image_element.get_attribute('src')
+                # --- NEW: Scrape Duration and Sound ---
+                # These selectors are based on common structures and your screenshot
+                duration_element = await card.query_selector('div[data-tt="VideoCover_index_Absolute"] span')
+                duration = await duration_element.inner_text() if duration_element else "0:00"
 
+                sound_element = await card.query_selector('div[data-tt="components_InspirationItemCard_FlexRow"] > span')
+                sound = await sound_element.inner_text() if sound_element else "Unknown Sound"
+                
+                hashtags_found = extract_hashtags(caption)
+                
                 scraped_data.append({
                     'caption': caption.strip(),
-                    # This line correctly adds the '#' back to each tag
                     'hashtags': ", ".join([f"#{tag}" for tag in hashtags_found]),
-                    'image_link': image_link
+                    'sound': sound.strip(),
+                    'duration': duration.strip()
                 })
 
             if scraped_data:
@@ -83,7 +81,7 @@ async def main():
         except Exception as e:
             print(f"\nAn error occurred: {e}")
         finally:
-            print("Process finished.")
+            print("Scraping process finished.")
             await browser.close()
 
 if __name__ == "__main__":
