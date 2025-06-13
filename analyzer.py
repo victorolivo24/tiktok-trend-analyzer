@@ -1,6 +1,13 @@
 import pandas as pd
 from collections import Counter
 import re
+import os
+import google.generativeai as genai
+
+# --- CONFIGURATION ---
+
+# For a real application, use environment variables, but this is fine for a personal project.
+GOOGLE_API_KEY = "AIzaSyAMXuPoFr46ZYEr5fBBY2-t7TrCNQrhWco"
 
 INPUT_FILE = 'tiktok_final_insights.csv'
 BARBER_KEYWORDS = ['barber', 'haircut', 'hairstyle', 'fade', 'taper', 'burstfade', 'lowfade', 'midfade', 'fringe', 'buzzcut', 'mullet']
@@ -12,17 +19,39 @@ try:
     STOP_WORDS = set(stopwords.words('english'))
 except ImportError:
     print("NLTK not found. Installing..."); import subprocess, sys
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "nltk"])
-    from nltk.corpus import stopwords; nltk.download('stopwords')
-    STOP_WORDS = set(stopwords.words('english'))
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "nltk"]); from nltk.corpus import stopwords; nltk.download('stopwords'); STOP_WORDS = set(stopwords.words('english'))
 
-def convert_to_number(s):
-    if not isinstance(s, str): return s
-    s = s.lower().strip()
-    if 'm' in s: return float(s.replace('m', '')) * 1000000
-    if 'k' in s: return float(s.replace('k', '')) * 1000
-    try: return float(s)
-    except (ValueError, TypeError): return 0
+def generate_ai_recommendations(top_hashtags, top_keywords):
+    """Uses a generative AI to create video ideas based on the data."""
+    print("\n" + "="*50 + "\n🤖 AI-Powered Creative Recommendations 🤖\n" + "="*50)
+    try:
+        genai.configure(api_key=GOOGLE_API_KEY)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        # --- This is our Prompt to the AI ---
+        prompt = f"""
+        You are a viral TikTok content strategist for a trendy, modern barbershop.
+        I have analyzed competitor videos and have the following data on what is trending:
+
+        Top Trending Hashtags: {', '.join(top_hashtags)}
+        Top Trending Keywords: {', '.join(top_keywords)}
+
+        Based ONLY on this data, generate 3 distinct, creative, and specific video ideas that I can film.
+        For each idea, provide a catchy "Title Idea" and a "Video Concept" description.
+        Make the concepts visual and engaging for a TikTok audience.
+        """
+
+        print("Connecting to AI to generate creative ideas... Please wait.")
+        response = model.generate_content(prompt)
+        
+        print("\nHere are your AI-generated video ideas:\n")
+        print(response.text)
+
+    except Exception as e:
+        print("\nCould not connect to the AI service.")
+        print("Please ensure your API key is correct and you have an internet connection.")
+        print(f"Error details: {e}")
+
 
 def analyze_insights():
     try:
@@ -34,26 +63,26 @@ def analyze_insights():
     df_filtered = df[df['caption'].str.contains(keyword_pattern, na=False, case=False)].copy()
     
     if df_filtered.empty: print(f"No videos found for your niche."); return
-    print(f"Found {len(df_filtered)} videos related to the barbering niche. Generating final report...")
+    print(f"Found {len(df_filtered)} videos related to the barbering niche. Generating analysis...")
     
-    df_filtered['views_num'] = df_filtered['views'].apply(convert_to_number)
-    df_filtered['likes_num'] = df_filtered['likes'].apply(convert_to_number)
-    df_sorted_by_views = df_filtered.sort_values(by='views_num', ascending=False)
-
-    print("\n" + "="*40 + "\n🔥 Top 5 Most Viewed Videos 🔥\n" + "="*40)
-    for index, row in df_sorted_by_views.head(5).iterrows():
-        print(f"  Views: {row['views']} | Likes: {row['likes']}")
-        print(f"  Caption: {row['caption'][:80]}...")
-        print("-" * 20)
-
-    print("\n" + "="*40 + "\n🏆 Top 15 Most Common Hashtags 🏆\n" + "="*40)
+    # --- Analysis Section ---
     all_hashtags = [tag.strip().lower() for tag_list in df_filtered['hashtags'].dropna() for tag in tag_list.split(',') if tag.strip()]
-    for hashtag, count in Counter(all_hashtags).most_common(15): print(f"  {hashtag}: {count} times")
-
-    print("\n" + "="*40 + "\n🔑 Top 15 Most Common Keywords 🔑\n" + "="*40)
+    hashtag_counts = Counter(all_hashtags)
+    top_10_hashtags = [item[0] for item in hashtag_counts.most_common(10)]
+    
     all_words = re.findall(r'\b\w+\b', ' '.join(df_filtered['caption'].dropna()).lower())
     meaningful_words = [word for word in all_words if word not in STOP_WORDS and word not in BARBER_KEYWORDS and not word.isdigit() and len(word) > 2]
-    for keyword, count in Counter(meaningful_words).most_common(15): print(f"  '{keyword}': {count} times")
+    keyword_counts = Counter(meaningful_words)
+    top_10_keywords = [item[0] for item in keyword_counts.most_common(10)]
+
+    # --- Generate AI recommendations INSTEAD of printing lists ---
+    if GOOGLE_API_KEY == "PASTE_YOUR_API_KEY_HERE":
+        print("\n" + "!"*50)
+        print("!!! ACTION REQUIRED: Please paste your Google AI API key into the top of the analyzer.py script.")
+        print("!"*50)
+    else:
+        generate_ai_recommendations(top_10_hashtags, top_10_keywords)
+
 
 if __name__ == "__main__":
     analyze_insights()
