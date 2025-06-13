@@ -7,7 +7,7 @@ import google.generativeai as genai
 # --- CONFIGURATION ---
 # IMPORTANT: PASTE YOUR API KEY HERE
 # For a real application, use environment variables, but this is fine for a personal project.
-GOOGLE_API_KEY = "AIzaSyAMXuPoFr46ZYEr5fBBY2-t7TrCNQrhWco"
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 INPUT_FILE = 'tiktok_final_insights.csv'
 BARBER_KEYWORDS = ['barber', 'haircut', 'hairstyle', 'fade', 'taper', 'burstfade', 'lowfade', 'midfade', 'fringe', 'buzzcut', 'mullet']

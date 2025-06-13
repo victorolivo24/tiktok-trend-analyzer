@@ -1,3 +1,16 @@
+# Python virtual environment
+venv/
+__pycache__/
+
+# Sensitive files
+my_cookies.json
+
+# Generated data files - should not be in version control
+*.csv
+
+# IDE / Editor specific files
+.vscode/
+.idea/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
