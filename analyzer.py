@@ -6,11 +6,7 @@ import google.generativeai as genai
 
 # --- CONFIGURATION ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
-# --- THIS IS THE FIX ---
-# Make sure the input file matches what the scraper saves
-INPUT_FILE = 'tiktok_final_insights.csv'
-
+INPUT_FILE = 'tiktok_studio_insights.csv'
 BARBER_KEYWORDS = ['barber', 'haircut', 'hairstyle', 'fade', 'taper', 'burstfade', 'lowfade', 'midfade', 'fringe', 'buzzcut', 'mullet']
 
 try:
@@ -23,9 +19,8 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "nltk"]); from nltk.corpus import stopwords; nltk.download('stopwords'); STOP_WORDS = set(stopwords.words('english'))
 
 def generate_ai_recommendations(top_hashtags, top_keywords):
-    """Generates AI recommendations and returns them as a string."""
     if not GOOGLE_API_KEY:
-        return "Google API Key not found in environment variables. Cannot generate AI recommendations."
+        return "Google API Key not found. Please set the environment variable."
     try:
         genai.configure(api_key=GOOGLE_API_KEY)
         model = genai.GenerativeModel('gemini-1.5-flash')
@@ -43,11 +38,10 @@ def generate_ai_recommendations(top_hashtags, top_keywords):
         return f"Could not connect to the AI service. Error: {e}"
 
 def get_analysis_results():
-    """Reads the CSV and returns a dictionary of results."""
     try:
         df = pd.read_csv(INPUT_FILE)
     except FileNotFoundError:
-        return {"error": f"'{INPUT_FILE}' not found. Please run the scraper first by clicking the button."}
+        return {"error": f"'{INPUT_FILE}' not found. Run scraper.py first."}
 
     keyword_pattern = '|'.join(BARBER_KEYWORDS)
     df_filtered = df[df['caption'].str.contains(keyword_pattern, na=False, case=False)].copy()
@@ -55,24 +49,25 @@ def get_analysis_results():
     if df_filtered.empty:
         return {"error": "No videos found for your niche in the data."}
     
+    # --- Analysis ---
     all_hashtags = [tag.strip().lower() for tag_list in df_filtered['hashtags'].dropna() for tag in tag_list.split(',') if tag.strip()]
-    hashtag_counts = Counter(all_hashtags).most_common(15)
+    hashtag_counts = Counter(all_hashtags).most_common(10) # Top 10 for the chart
     
     all_words = re.findall(r'\b\w+\b', ' '.join(df_filtered['caption'].dropna()).lower())
     meaningful_words = [word for word in all_words if word not in STOP_WORDS and word not in BARBER_KEYWORDS and not word.isdigit() and len(word) > 2]
-    keyword_counts = Counter(meaningful_words).most_common(15)
+    keyword_counts = Counter(meaningful_words).most_common(10) # Top 10 for the chart
     
-    top_10_hashtags = [item[0] for item in hashtag_counts[:10]]
-    top_10_keywords = [item[0] for item in keyword_counts[:10]]
-    ai_recs = generate_ai_recommendations(top_10_hashtags, top_10_keywords)
+    top_hashtags_for_ai = [item[0] for item in hashtag_counts]
+    top_keywords_for_ai = [item[0] for item in keyword_counts]
+    ai_recs = generate_ai_recommendations(top_hashtags_for_ai, top_keywords_for_ai)
     
     return {
+        "total_videos_analyzed": len(df_filtered), # <-- THE NEW DATA POINT
         "hashtags": hashtag_counts,
         "keywords": keyword_counts,
         "ai_recs": ai_recs
     }
 
-# This block allows running the script directly for testing
 if __name__ == "__main__":
     results = get_analysis_results()
     print(results)
