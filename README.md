@@ -1,5 +1,7 @@
 # 🤖 AI-Powered TikTok Trend Analyzer
 
+![App Screenshot](Screenshot%202025-06-14%20164943.png)
+
 A full-stack web application that uses an authenticated browser session to scrape personalized video recommendations from a user's TikTok Studio account, performs a detailed trend analysis, and leverages generative AI to brainstorm new content ideas.
 
 ---
