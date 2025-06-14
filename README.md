@@ -84,17 +84,3 @@ Open the dashboard:
 Go to http://127.0.0.1:5000
 
 Click "Launch Analysis" and see your results!
-
-📂 Project Structure
-graphql
-Copy
-Edit
-/
-├── app.py              # Flask backend
-├── scraper.py          # Scrapes TikTok Studio
-├── analyzer.py         # Performs trend analysis + AI generation
-├── requirements.txt    # Python dependencies
-├── templates/
-│   └── index.html      # Frontend UI
-├── my_cookies.json     # TikTok session cookies (private)
-└── .gitignore          # Files to ignore
