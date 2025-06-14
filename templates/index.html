@@ -7,31 +7,27 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --dark-bg: #111827;
             --light-bg: #1F2937;
             --card-bg: #374151;
-            --primary-accent: #E11D48; /* A vibrant pink/red */
+            --primary-accent: #E11D48;
             --primary-accent-hover: #BE123C;
             --text-primary: #F9FAFB;
             --text-secondary: #9CA3AF;
+            --border-color: #4B5563;
         }
-
         body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', sans-serif;
             background-color: var(--dark-bg); 
             color: var(--text-primary); 
             text-align: center; 
             margin: 0;
             padding: 40px 20px;
         }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
+        .container { max-width: 900px; margin: 0 auto; }
         h1 { 
             font-size: 2.5rem;
             font-weight: 700;
@@ -40,124 +36,57 @@
             -webkit-text-fill-color: transparent;
             margin-bottom: 1rem;
         }
-
-        p.subtitle {
-            font-size: 1.125rem;
-            color: var(--text-secondary);
-            margin-bottom: 2.5rem;
-        }
-
+        p.subtitle { font-size: 1.125rem; color: var(--text-secondary); margin-bottom: 2.5rem; }
         button { 
-            background-color: var(--primary-accent); 
-            color: white; 
-            border: none; 
-            padding: 15px 32px; 
-            font-size: 1rem; 
-            font-weight: 600; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            transition: all 0.3s ease;
+            background-color: var(--primary-accent); color: white; border: none; 
+            padding: 15px 32px; font-size: 1rem; font-weight: 600; border-radius: 8px; 
+            cursor: pointer; transition: all 0.3s ease;
             box-shadow: 0 4px 15px -5px rgba(225, 29, 72, 0.4);
         }
-
-        button:hover { 
-            background-color: var(--primary-accent-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px -5px rgba(225, 29, 72, 0.5);
-        }
-
-        button:disabled { 
-            background-color: #374151; 
-            cursor: not-allowed;
-            transform: translateY(0);
-            box-shadow: none;
-        }
-
+        button:hover { background-color: var(--primary-accent-hover); transform: translateY(-2px); box-shadow: 0 6px 20px -5px rgba(225, 29, 72, 0.5); }
+        button:disabled { background-color: #374151; cursor: not-allowed; transform: translateY(0); box-shadow: none; }
+        
         #results-container { 
             opacity: 0;
             transform: translateY(20px);
-            transition: opacity 0.5s ease, transform 0.5s ease;
+            transition: opacity 0.7s ease, transform 0.7s ease;
             margin-top: 40px;
         }
+        #results-container.visible { opacity: 1; transform: translateY(0); }
         
-        #results-container.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; text-align: left; margin-bottom: 2rem; }
+        .results-card { background-color: var(--light-bg); padding: 24px; border-radius: 12px; border: 1px solid var(--border-color); }
+        h2 { border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top: 0; font-size: 1.25rem; font-weight: 600; }
+        pre { white-space: pre-wrap; word-wrap: break-word; text-align: left; background-color: var(--light-bg); padding: 20px; border-radius: 12px; font-family: monospace; font-size: 0.9rem; line-height: 1.6; border: 1px solid var(--border-color); }
+        #loading-message h2, #error-message h2 { font-size: 1.2rem; color: var(--text-secondary); }
+        .summary-text { margin-bottom: 2rem; font-size: 1.1rem; color: var(--text-secondary); }
 
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            text-align: left;
-            margin-bottom: 2rem;
-        }
-
-        .results-card {
-            background-color: var(--light-bg);
-            padding: 24px;
-            border-radius: 12px;
-            border: 1px solid #374151;
-        }
-
-        h2 { 
-            border-bottom: 1px solid var(--card-bg);
-            padding-bottom: 10px; 
-            margin-top: 0;
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        ul { list-style-type: none; padding: 0; }
-        li { 
-            background-color: var(--card-bg);
-            margin-bottom: 8px; 
-            padding: 12px; 
-            border-radius: 6px; 
-            font-size: 0.9rem;
-            transition: background-color 0.2s ease;
-        }
-        li:hover { background-color: #4B5563; }
-        
-        pre { 
-            white-space: pre-wrap; 
-            word-wrap: break-word; 
-            text-align: left; 
-            background-color: var(--light-bg); 
-            padding: 20px; 
-            border-radius: 12px; 
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9rem;
-            line-height: 1.6;
-            border: 1px solid #374151;
-        }
-        
-        #loading-message h2, #error-message h2 {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>AI TikTok Content Strategist</h1>
-        <p class="subtitle">Click the button to get the latest analysis and AI-powered video ideas from your personalized "For You" feed.</p>
+        <p class="subtitle">Click to get a full analysis of personalized trends and receive AI-generated video ideas.</p>
         <button id="analyze-btn">🚀 Launch Analysis</button>
 
         <div id="results-container">
             <div id="loading-message" style="display: none;">
-                <h2>⚙️ Running analysis... This may take a minute. The AI is thinking!</h2>
+                <h2>⚙️ Running analysis... This may take a minute. Please wait.</h2>
             </div>
             
             <div id="results-content" style="display: none;">
+                <p class="summary-text" id="summary-text"></p>
                 <div class="grid">
                     <div class="results-card">
                         <h2>🏆 Top Hashtags</h2>
-                        <ul id="hashtags-list"></ul>
+                        <canvas id="hashtags-chart"></canvas>
                     </div>
                     <div class="results-card">
                         <h2>🔑 Top Keywords</h2>
-                        <ul id="keywords-list"></ul>
+                        <canvas id="keywords-chart"></canvas>
                     </div>
                 </div>
                 <div class="results-card">
@@ -178,6 +107,35 @@
         const loadingMessage = document.getElementById('loading-message');
         const resultsContent = document.getElementById('results-content');
         const errorMessage = document.getElementById('error-message');
+        const summaryText = document.getElementById('summary-text');
+        
+        let hashtagsChart, keywordsChart; // To hold our chart instances
+
+        function createChart(canvasId, labels, data, label) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: 'rgba(225, 29, 72, 0.5)',
+                        borderColor: 'rgba(225, 29, 72, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Makes the bar chart horizontal
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#9CA3AF' } },
+                        y: { ticks: { color: '#F9FAFB' } }
+                    }
+                }
+            });
+        }
 
         analyzeBtn.addEventListener('click', () => {
             analyzeBtn.disabled = true;
@@ -187,13 +145,12 @@
             resultsContent.style.display = 'none';
             errorMessage.style.display = 'none';
 
+            // Destroy old charts if they exist
+            if(hashtagsChart) hashtagsChart.destroy();
+            if(keywordsChart) keywordsChart.destroy();
+
             fetch('/run-analysis')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
                     loadingMessage.style.display = 'none';
 
@@ -201,22 +158,20 @@
                         document.getElementById('error-text').innerText = data.error;
                         errorMessage.style.display = 'block';
                     } else {
-                        const hashtagsList = document.getElementById('hashtags-list');
-                        hashtagsList.innerHTML = '';
-                        data.hashtags.forEach(item => {
-                            const li = document.createElement('li');
-                            li.innerText = `${item[0]}: ${item[1]} times`;
-                            hashtagsList.appendChild(li);
-                        });
+                        // Display the summary text
+                        summaryText.innerText = `Analysis based on ${data.total_videos_analyzed} relevant videos found in your feed.`;
 
-                        const keywordsList = document.getElementById('keywords-list');
-                        keywordsList.innerHTML = '';
-                        data.keywords.forEach(item => {
-                            const li = document.createElement('li');
-                            li.innerText = `'${item[0]}': ${item[1]} times`;
-                            keywordsList.appendChild(li);
-                        });
+                        // Prepare data for charts
+                        const hashtagLabels = data.hashtags.map(item => item[0]).reverse();
+                        const hashtagData = data.hashtags.map(item => item[1]).reverse();
+                        const keywordLabels = data.keywords.map(item => item[0]).reverse();
+                        const keywordData = data.keywords.map(item => item[1]).reverse();
 
+                        // Create charts
+                        hashtagsChart = createChart('hashtags-chart', hashtagLabels, hashtagData, 'Hashtag Count');
+                        keywordsChart = createChart('keywords-chart', keywordLabels, keywordData, 'Keyword Count');
+                        
+                        // Populate AI recommendations
                         document.getElementById('ai-recs').innerText = data.ai_recs;
                         
                         resultsContent.style.display = 'block';
@@ -225,7 +180,7 @@
                 .catch(error => {
                     console.error('Error:', error);
                     loadingMessage.style.display = 'none';
-                    document.getElementById('error-text').innerText = 'A critical error occurred. Please check the terminal running the Flask app for more details.';
+                    document.getElementById('error-text').innerText = 'A critical error occurred. Check the terminal for details.';
                     errorMessage.style.display = 'block';
                 })
                 .finally(() => {

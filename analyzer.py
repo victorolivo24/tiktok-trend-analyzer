@@ -6,7 +6,7 @@ import google.generativeai as genai
 
 # --- CONFIGURATION ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-INPUT_FILE = 'tiktok_studio_insights.csv'
+INPUT_FILE = 'tiktok_final_insights.csv'
 BARBER_KEYWORDS = ['barber', 'haircut', 'hairstyle', 'fade', 'taper', 'burstfade', 'lowfade', 'midfade', 'fringe', 'buzzcut', 'mullet']
 
 try:
