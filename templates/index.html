@@ -37,14 +37,34 @@
             margin-bottom: 1rem;
         }
         p.subtitle { font-size: 1.125rem; color: var(--text-secondary); margin-bottom: 2.5rem; }
-        button { 
+        
+        /* Main Button Style */
+        .main-btn { 
             background-color: var(--primary-accent); color: white; border: none; 
             padding: 15px 32px; font-size: 1rem; font-weight: 600; border-radius: 8px; 
             cursor: pointer; transition: all 0.3s ease;
             box-shadow: 0 4px 15px -5px rgba(225, 29, 72, 0.4);
         }
-        button:hover { background-color: var(--primary-accent-hover); transform: translateY(-2px); box-shadow: 0 6px 20px -5px rgba(225, 29, 72, 0.5); }
-        button:disabled { background-color: #374151; cursor: not-allowed; transform: translateY(0); box-shadow: none; }
+        .main-btn:hover { background-color: var(--primary-accent-hover); transform: translateY(-2px); box-shadow: 0 6px 20px -5px rgba(225, 29, 72, 0.5); }
+        .main-btn:disabled { background-color: #374151; cursor: not-allowed; transform: translateY(0); box-shadow: none; }
+        
+        /* --- NEW: Secondary button style for toggles --- */
+        .toggle-btn {
+            background-color: var(--card-bg);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 1rem;
+        }
+        .toggle-btn:hover {
+            background-color: var(--border-color);
+            color: var(--text-primary);
+        }
         
         #results-container { 
             opacity: 0;
@@ -57,6 +77,9 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; text-align: left; margin-bottom: 2rem; }
         .results-card { background-color: var(--light-bg); padding: 24px; border-radius: 12px; border: 1px solid var(--border-color); }
         h2 { border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top: 0; font-size: 1.25rem; font-weight: 600; }
+        ul { list-style-type: none; padding: 0; margin-top: 1rem; }
+        li { background-color: var(--card-bg); margin-bottom: 8px; padding: 12px; border-radius: 6px; font-size: 0.9rem; }
+        
         pre { white-space: pre-wrap; word-wrap: break-word; text-align: left; background-color: var(--light-bg); padding: 20px; border-radius: 12px; font-family: monospace; font-size: 0.9rem; line-height: 1.6; border: 1px solid var(--border-color); }
         #loading-message h2, #error-message h2 { font-size: 1.2rem; color: var(--text-secondary); }
         .summary-text { margin-bottom: 2rem; font-size: 1.1rem; color: var(--text-secondary); }
@@ -70,9 +93,9 @@
     <div class="container">
         <h1>AI TikTok Content Strategist</h1>
         <p class="subtitle">Click to get a full analysis of personalized trends and receive AI-generated video ideas.</p>
-        <button id="analyze-btn">🚀 Launch Analysis</button>
+        <button id="analyze-btn" class="main-btn">🚀 Launch Analysis</button>
 
-        <div id="results-container">
+        <div id="results-container" style="opacity:0; transform: translateY(20px);">
             <div id="loading-message" style="display: none;">
                 <h2>⚙️ Running analysis... This may take a minute. Please wait.</h2>
             </div>
@@ -83,10 +106,14 @@
                     <div class="results-card">
                         <h2>🏆 Top Hashtags</h2>
                         <canvas id="hashtags-chart"></canvas>
+                        <button class="toggle-btn" data-target="hashtags-list-ul">Show Full List</button>
+                        <ul id="hashtags-list-ul" style="display: none;"></ul>
                     </div>
                     <div class="results-card">
                         <h2>🔑 Top Keywords</h2>
                         <canvas id="keywords-chart"></canvas>
+                        <button class="toggle-btn" data-target="keywords-list-ul">Show Full List</button>
+                        <ul id="keywords-list-ul" style="display: none;"></ul>
                     </div>
                 </div>
                 <div class="results-card">
@@ -102,6 +129,7 @@
     </div>
 
     <script>
+        // --- All the script from before is the same, with one new part at the end ---
         const analyzeBtn = document.getElementById('analyze-btn');
         const resultsContainer = document.getElementById('results-container');
         const loadingMessage = document.getElementById('loading-message');
@@ -109,7 +137,7 @@
         const errorMessage = document.getElementById('error-message');
         const summaryText = document.getElementById('summary-text');
         
-        let hashtagsChart, keywordsChart; // To hold our chart instances
+        let hashtagsChart, keywordsChart;
 
         function createChart(canvasId, labels, data, label) {
             const ctx = document.getElementById(canvasId).getContext('2d');
@@ -120,13 +148,13 @@
                     datasets: [{
                         label: label,
                         data: data,
-                        backgroundColor: 'rgba(225, 29, 72, 0.5)',
+                        backgroundColor: 'rgba(225, 29, 72, 0.6)',
                         borderColor: 'rgba(225, 29, 72, 1)',
                         borderWidth: 1
                     }]
                 },
                 options: {
-                    indexAxis: 'y', // Makes the bar chart horizontal
+                    indexAxis: 'y',
                     responsive: true,
                     plugins: { legend: { display: false } },
                     scales: {
@@ -140,12 +168,12 @@
         analyzeBtn.addEventListener('click', () => {
             analyzeBtn.disabled = true;
             analyzeBtn.innerText = 'Analyzing...';
-            resultsContainer.classList.add('visible');
+            resultsContainer.style.opacity = 1;
+            resultsContainer.style.transform = 'translateY(0)';
             loadingMessage.style.display = 'block';
             resultsContent.style.display = 'none';
             errorMessage.style.display = 'none';
 
-            // Destroy old charts if they exist
             if(hashtagsChart) hashtagsChart.destroy();
             if(keywordsChart) keywordsChart.destroy();
 
@@ -158,20 +186,34 @@
                         document.getElementById('error-text').innerText = data.error;
                         errorMessage.style.display = 'block';
                     } else {
-                        // Display the summary text
                         summaryText.innerText = `Analysis based on ${data.total_videos_analyzed} relevant videos found in your feed.`;
+                        
+                        // Populate the FULL lists (even though they are hidden initially)
+                        const hashtagsListUl = document.getElementById('hashtags-list-ul');
+                        hashtagsListUl.innerHTML = '';
+                        data.hashtags.forEach(item => {
+                            const li = document.createElement('li');
+                            li.innerText = `${item[0]}: ${item[1]} times`;
+                            hashtagsListUl.appendChild(li);
+                        });
 
-                        // Prepare data for charts
+                        const keywordsListUl = document.getElementById('keywords-list-ul');
+                        keywordsListUl.innerHTML = '';
+                        data.keywords.forEach(item => {
+                            const li = document.createElement('li');
+                            li.innerText = `'${item[0]}': ${item[1]} times`;
+                            keywordsListUl.appendChild(li);
+                        });
+
+                        // Prepare data for charts (Top 10) and reverse for horizontal display
                         const hashtagLabels = data.hashtags.map(item => item[0]).reverse();
                         const hashtagData = data.hashtags.map(item => item[1]).reverse();
                         const keywordLabels = data.keywords.map(item => item[0]).reverse();
                         const keywordData = data.keywords.map(item => item[1]).reverse();
 
-                        // Create charts
                         hashtagsChart = createChart('hashtags-chart', hashtagLabels, hashtagData, 'Hashtag Count');
                         keywordsChart = createChart('keywords-chart', keywordLabels, keywordData, 'Keyword Count');
                         
-                        // Populate AI recommendations
                         document.getElementById('ai-recs').innerText = data.ai_recs;
                         
                         resultsContent.style.display = 'block';
@@ -187,6 +229,22 @@
                     analyzeBtn.disabled = false;
                     analyzeBtn.innerText = '🚀 Launch Analysis';
                 });
+        });
+
+        // --- NEW: JavaScript for the toggle buttons ---
+        document.querySelectorAll('.toggle-btn').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const targetId = event.target.dataset.target;
+                const listElement = document.getElementById(targetId);
+
+                if (listElement.style.display === 'none') {
+                    listElement.style.display = 'block';
+                    event.target.innerText = 'Hide Full List';
+                } else {
+                    listElement.style.display = 'none';
+                    event.target.innerText = 'Show Full List';
+                }
+            });
         });
     </script>
 </body>
