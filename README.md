@@ -77,9 +77,6 @@ Paste the copied cookies and save the file.
 Step 3: Run the App
 Launch the Flask server:
 
-bash
-Copy
-Edit
 python app.py
 Open the dashboard:
 
